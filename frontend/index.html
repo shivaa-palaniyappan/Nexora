@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nexora — Ask your codebase anything</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;1,300&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  /* Deep Space Palette */
+  --void:#05040f;
+  --deep:#080714;
+  --surface:#0c0b1c;
+  --panel:#100f22;
+  --card:#15132d;
+  --edge:#1e1b3d;
+  --rim:#2a2659;
+
+  /* Accent colors - Violet + Gold */
+  --violet:#7c3aed;
+  --violet-lt:#a855f7;
+  --violet-glow:rgba(124,58,237,0.35);
+  --gold:#f59e0b;
+  --gold-lt:#fcd34d;
+  --gold-glow:rgba(245,158,11,0.3);
+  --rose:#fb7185;
+  --ice:#e0e7ff;
+
+  /* Text */
+  --txt:#f0eeff;
+  --txt2:#9590c8;
+  --txt3:#4a4580;
+  --txt4:#282550;
+
+  /* Fonts */
+  --serif:'DM Serif Display',serif;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Outfit',sans-serif;
+  --r:6px;--r-lg:12px;--r-xl:20px;
+}
+
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  font-family:var(--sans);
+  background:var(--void);
+  color:var(--txt);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+button,input,textarea{font-family:var(--sans)}
+a{color:var(--violet-lt);text-decoration:none}
+
+/* ── Star warp canvas (fixed bg) */
+#starfield{
+  position:fixed;inset:0;z-index:0;
+  width:100%;height:100%;
+  pointer-events:none;
+}
+
+/* ── Vignette overlay */
+.vignette{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(5,4,15,0.85) 100%);
+}
+
+/* ── Grain texture */
+.grain{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.018;
+}
+
+/* ── Topbar */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;
+  background:rgba(5,4,15,0.6);
+  border-bottom:1px solid rgba(124,58,237,0.12);
+  backdrop-filter:blur(24px) saturate(200%);
+}
+.logo{
+  font-family:var(--serif);font-size:1.25rem;
+  display:flex;align-items:center;gap:10px;
+  color:var(--txt);letter-spacing:-0.3px;
+}
+.logo-gem{
+  width:30px;height:30px;
+  background:linear-gradient(135deg,var(--violet),var(--gold));
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px var(--violet-glow);
+}
+.logo-gem svg{width:14px;height:14px}
+.logo em{font-style:italic;color:var(--gold-lt)}
+.topbar-right{display:flex;align-items:center;gap:6px}
+.tb-btn{
+  padding:7px 18px;border-radius:var(--r);
+  font-size:.78rem;font-weight:500;letter-spacing:.02em;
+  border:1px solid var(--edge);color:var(--txt2);
+  background:rgba(255,255,255,.03);
+  transition:all .2s;cursor:pointer;
+}
+.tb-btn:hover{border-color:var(--violet);color:var(--violet-lt);background:rgba(124,58,237,.06)}
+.tb-btn.primary{background:linear-gradient(135deg,var(--violet),#9333ea);color:#fff;border-color:transparent;box-shadow:0 0 20px var(--violet-glow)}
+.tb-btn.primary:hover{box-shadow:0 0 32px rgba(124,58,237,.6);transform:translateY(-1px)}
+
+/* ══════════════════════════════════════════════════════
+   LANDING
+══════════════════════════════════════════════════════ */
+#landing{
+  position:relative;z-index:2;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+}
+
+/* ── Hero: asymmetric split */
+.hero-split{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  min-height:100vh;
+  align-items:center;
+}
+
+/* left side */
+.hero-left{
+  padding:140px 60px 80px 80px;
+  display:flex;flex-direction:column;
+  justify-content:center;
+  position:relative;
+}
+.hero-eyebrow{
+  font-family:var(--mono);font-size:.65rem;font-weight:300;
+  letter-spacing:.25em;text-transform:uppercase;
+  color:var(--gold);
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:32px;
+  animation:fadeUp .7s ease both;
+}
+.hero-eyebrow::before{
+  content:'';width:24px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold));
+}
+.hero-eyebrow::after{
+  content:'';width:24px;height:1px;
+  background:linear-gradient(90deg,var(--gold),transparent);
+}
+
+.hero-h1{
+  font-family:var(--serif);
+  font-size:clamp(3.5rem,5.5vw,6rem);
+  line-height:1.03;
+  letter-spacing:-1px;
+  margin-bottom:24px;
+  animation:fadeUp .7s .1s ease both;
+}
+.hero-h1 .line-pale{color:var(--txt2);font-style:italic}
+.hero-h1 .line-bright{color:var(--txt)}
+.hero-h1 .line-gold{
+  background:linear-gradient(90deg,var(--gold-lt),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 30px rgba(245,158,11,0.25));
+}
+
+.hero-desc{
+  font-size:1.05rem;color:var(--txt2);line-height:1.75;
+  max-width:480px;margin-bottom:44px;
+  animation:fadeUp .7s .2s ease both;
+  font-weight:300;
+}
+.hero-desc strong{color:var(--violet-lt);font-weight:500}
+
+.hero-actions{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  animation:fadeUp .7s .3s ease both;
+}
+.btn-launch{
+  padding:14px 32px;
+  background:linear-gradient(135deg,var(--violet) 0%,#9333ea 100%);
+  color:#fff;border:none;border-radius:var(--r);
+  font-size:.9rem;font-weight:600;letter-spacing:.02em;
+  cursor:pointer;
+  box-shadow:0 0 40px var(--violet-glow),0 8px 24px rgba(0,0,0,0.4);
+  transition:all .25s;display:flex;align-items:center;gap:10px;
+}
+.btn-launch:hover{
+  transform:translateY(-2px);
+  box-shadow:0 0 60px rgba(124,58,237,.6),0 12px 32px rgba(0,0,0,.5);
+}
+.btn-launch .arr{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;transition:transform .2s;
+}
+.btn-launch:hover .arr{transform:translateX(3px)}
+
+.btn-ghost{
+  padding:14px 24px;
+  background:transparent;border:1px solid var(--edge);
+  color:var(--txt2);border-radius:var(--r);
+  font-size:.9rem;cursor:pointer;transition:all .2s;
+}
+.btn-ghost:hover{border-color:var(--violet);color:var(--violet-lt)}
+
+/* right side: animated terminal card */
+.hero-right{
+  padding:140px 80px 80px 40px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.terminal-showcase{
+  width:100%;max-width:520px;
+  background:var(--panel);
+  border:1px solid var(--edge);
+  border-radius:var(--r-xl);
+  overflow:hidden;
+  box-shadow:
+    0 0 0 1px rgba(124,58,237,0.08),
+    0 40px 80px rgba(0,0,0,0.6),
+    0 0 120px rgba(124,58,237,0.08);
+  animation:fadeUp .7s .4s ease both;
+}
+.term-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 18px;
+  background:var(--surface);
+  border-bottom:1px solid var(--edge);
+}
+.term-dot{width:11px;height:11px;border-radius:50%}
+.term-dot:nth-child(1){background:#ff5f57}
+.term-dot:nth-child(2){background:#febc2e}
+.term-dot:nth-child(3){background:#28c840}
+.term-title{
+  flex:1;text-align:center;
+  font-family:var(--mono);font-size:.68rem;color:var(--txt3);
+  letter-spacing:.05em;
+}
+.term-body{padding:22px 22px 8px;font-family:var(--mono);font-size:.78rem;line-height:1.8}
+.t-prompt{color:var(--txt3)}
+.t-cmd{color:var(--gold-lt)}
+.t-comment{color:var(--txt3);font-style:italic}
+.t-out-label{color:var(--violet-lt);font-weight:600}
+.t-out-val{color:var(--txt)}
+.t-src{
+  display:inline-block;
+  background:rgba(124,58,237,.12);
+  border:1px solid rgba(124,58,237,.2);
+  border-radius:4px;padding:1px 7px;
+  color:var(--violet-lt);font-size:.7rem;cursor:pointer;
+  transition:all .15s;
+}
+.t-src:hover{background:rgba(124,58,237,.25);border-color:var(--violet)}
+.t-line{margin-bottom:4px}
+.t-spacer{height:10px}
+.t-blink::after{content:'▋';animation:blink .9s infinite;color:var(--violet-lt)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-glow-bar{
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--violet),var(--gold),var(--violet),transparent);
+  opacity:0.5;
+}
+
+/* ── stat strip below hero split */
+.stat-strip{
+  position:relative;z-index:2;
+  border-top:1px solid var(--edge);
+  display:grid;grid-template-columns:repeat(3,1fr);
+}
+.strip-item{
+  padding:36px 48px;
+  border-right:1px solid var(--edge);
+  display:flex;align-items:center;gap:24px;
+  transition:background .3s;
+}
+.strip-item:last-child{border-right:none}
+.strip-item:hover{background:rgba(124,58,237,.04)}
+.strip-num{
+  font-family:var(--serif);font-size:3.5rem;
+  line-height:1;
+  background:linear-gradient(135deg,var(--gold-lt),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.strip-label{font-size:.8rem;color:var(--txt3);line-height:1.5;font-weight:400;max-width:90px}
+
+/* ── Manifesto section */
+.manifesto-section{
+  position:relative;z-index:2;
+  padding:120px 80px;
+  border-top:1px solid var(--edge);
+}
+.ms-eyebrow{
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--txt3);margin-bottom:64px;
+}
+.manifesto-block{display:flex;flex-direction:column;gap:0}
+.manifesto-row{
+  display:grid;grid-template-columns:80px 1fr;gap:32px;
+  align-items:baseline;
+  padding:32px 0;
+  border-bottom:1px solid var(--edge);
+  transition:background .2s;
+}
+.manifesto-row:first-child{border-top:1px solid var(--edge)}
+.manifesto-row:hover{padding-left:16px;background:rgba(124,58,237,.03)}
+.m-num{
+  font-family:var(--mono);font-size:.68rem;color:var(--txt4);
+  letter-spacing:.1em;
+}
+.m-text{
+  font-family:var(--serif);
+  font-size:clamp(1.6rem,3vw,2.5rem);
+  line-height:1.15;
+  color:var(--txt2);
+  transition:color .2s;
+}
+.manifesto-row:hover .m-text{color:var(--txt)}
+.m-text em{font-style:italic;color:var(--gold-lt)}
+.m-text strong{font-style:normal;color:var(--txt)}
+
+/* ── Feature cards */
+.features-section{
+  position:relative;z-index:2;
+  padding:80px 80px 120px;
+  border-top:1px solid var(--edge);
+}
+.feat-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--edge);
+  border:1px solid var(--edge);
+  border-radius:var(--r-xl);overflow:hidden;
+}
+.feat-card{
+  padding:40px 32px;
+  background:var(--panel);
+  transition:background .25s;
+  position:relative;overflow:hidden;
+}
+.feat-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(124,58,237,.06),transparent);
+  opacity:0;transition:opacity .3s;
+}
+.feat-card:hover{background:var(--card)}
+.feat-card:hover::before{opacity:1}
+.feat-num{
+  font-family:var(--mono);font-size:.62rem;color:var(--txt4);
+  letter-spacing:.15em;margin-bottom:24px;
+}
+.feat-icon{
+  width:44px;height:44px;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(245,158,11,.1));
+  border:1px solid rgba(124,58,237,.15);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+  font-size:1.2rem;
+}
+.feat-title{
+  font-family:var(--serif);font-size:1.25rem;
+  color:var(--txt);margin-bottom:12px;
+}
+.feat-body{font-size:.85rem;color:var(--txt2);line-height:1.7;font-weight:300}
+
+/* ══════════════════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════════════════ */
+#app{
+  position:relative;z-index:2;
+  display:none;
+  height:100vh;padding-top:56px;
+}
+.app-layout{
+  display:grid;
+  grid-template-columns:280px 1fr 260px;
+  height:100%;
+}
+
+/* ── Left Panel */
+.left-panel{
+  border-right:1px solid var(--edge);
+  display:flex;flex-direction:column;
+  background:var(--surface);
+  overflow:hidden;
+}
+.panel-label{
+  padding:16px 18px 12px;
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--txt3);border-bottom:1px solid var(--edge);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ph-pulse{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--violet-lt);
+  box-shadow:0 0 8px var(--violet-lt);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.8)}}
+
+.url-section{padding:16px 14px}
+.url-input{
+  width:100%;padding:10px 12px;
+  background:var(--card);border:1px solid var(--edge);
+  border-radius:var(--r);color:var(--txt);
+  font-family:var(--mono);font-size:.72rem;
+  transition:border-color .2s;outline:none;
+  margin-bottom:8px;
+}
+.url-input:focus{border-color:var(--violet)}
+.url-input::placeholder{color:var(--txt4)}
+.process-btn{
+  width:100%;padding:9px 12px;
+  background:linear-gradient(135deg,var(--violet),#9333ea);
+  color:#fff;border:none;border-radius:var(--r);
+  font-size:.75rem;font-weight:600;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all .2s;
+  box-shadow:0 0 20px rgba(124,58,237,.25);
+}
+.process-btn:hover{box-shadow:0 0 30px rgba(124,58,237,.4);transform:translateY(-1px)}
+.process-btn:disabled{opacity:.5;transform:none}
+
+/* progress */
+.progress-section{
+  margin:0 14px 12px;
+  padding:12px;
+  background:var(--card);border:1px solid var(--edge);border-radius:var(--r);
+  display:none;
+}
+.progress-section.visible{display:block}
+.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.prog-label{font-family:var(--mono);font-size:.65rem;color:var(--txt2)}
+.prog-badge{font-family:var(--mono);font-size:.58rem;padding:2px 7px;border-radius:20px;color:var(--txt3);border:1px solid var(--edge)}
+.status-completed{color:#4ade80!important;border-color:rgba(74,222,128,.3)!important;background:rgba(74,222,128,.06)}
+.status-failed{color:var(--rose)!important;border-color:rgba(251,113,133,.3)!important}
+.prog-track{height:2px;background:var(--edge);border-radius:1px;overflow:hidden;margin-bottom:6px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--gold));transition:width .3s;border-radius:1px}
+.prog-stats{font-family:var(--mono);font-size:.62rem;color:var(--txt3);display:flex;gap:12px}
+
+/* repo list */
+.repo-list-section{flex:1;overflow-y:auto;padding:8px 10px}
+.repo-list-section::-webkit-scrollbar{width:2px}
+.repo-list-section::-webkit-scrollbar-thumb{background:var(--edge)}
+.repo-divider{
+  padding:8px 6px;font-family:var(--mono);font-size:.58rem;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--txt4);
+}
+.repo-item{
+  padding:10px 10px;border-radius:var(--r);
+  cursor:pointer;transition:background .15s;margin-bottom:2px;
+}
+.repo-item:hover{background:var(--card)}
+.repo-item.active{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2)}
+.repo-name{font-size:.78rem;color:var(--txt);display:block;margin-bottom:4px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.repo-meta{display:flex;align-items:center;gap:6px}
+.repo-badge{font-family:var(--mono);font-size:.58rem;padding:2px 7px;border-radius:20px}
+.rb-done{background:rgba(74,222,128,.08);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.rb-fail{background:rgba(251,113,133,.08);color:var(--rose);border:1px solid rgba(251,113,133,.2)}
+.rb-proc{background:rgba(124,58,237,.1);color:var(--violet-lt);border:1px solid rgba(124,58,237,.2)}
+.repo-info{font-family:var(--mono);font-size:.6rem;color:var(--txt3)}
+
+/* ── Chat Panel */
+.chat-panel{
+  display:flex;flex-direction:column;
+  background:var(--void);
+  overflow:hidden;
+}
+.chat-header{
+  padding:14px 20px;
+  border-bottom:1px solid var(--edge);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.chat-repo-name{font-family:var(--serif);font-size:1.05rem;color:var(--txt);margin-bottom:2px}
+.chat-repo-sub{font-family:var(--mono);font-size:.65rem;color:var(--txt3)}
+.chat-actions{display:flex;gap:6px}
+.icon-btn{
+  width:30px;height:30px;border-radius:var(--r);
+  border:1px solid var(--edge);background:var(--surface);
+  color:var(--txt3);font-size:.85rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.icon-btn:hover{border-color:var(--violet);color:var(--violet-lt)}
+
+/* suggestions */
+.suggestions-bar{
+  padding:10px 18px;border-bottom:1px solid var(--edge);
+  display:flex;gap:6px;flex-wrap:wrap;min-height:42px;
+  flex-shrink:0;
+}
+.sug-chip{
+  padding:4px 12px;
+  border:1px solid var(--edge);border-radius:20px;
+  font-size:.72rem;color:var(--txt2);cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+  font-family:var(--mono);
+}
+.sug-chip:hover{border-color:var(--violet);color:var(--violet-lt);background:rgba(124,58,237,.06)}
+
+/* messages */
+.chat-messages{
+  flex:1;overflow-y:auto;padding:20px 20px 8px;
+  display:flex;flex-direction:column;gap:16px;
+}
+.chat-messages::-webkit-scrollbar{width:2px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--edge)}
+
+.empty-state{
+  margin:auto;text-align:center;padding:40px 20px;
+}
+.empty-icon{
+  font-size:2.5rem;margin-bottom:16px;
+  filter:grayscale(1);opacity:.3;
+}
+.empty-title{font-family:var(--serif);font-size:1.3rem;color:var(--txt2);margin-bottom:8px}
+.empty-sub{font-size:.8rem;color:var(--txt3);line-height:1.6;max-width:280px;margin:0 auto}
+
+/* message bubbles */
+.msg{padding:14px 16px;border-radius:var(--r-lg);max-width:88%}
+.msg-user{
+  align-self:flex-end;
+  background:rgba(124,58,237,.15);
+  border:1px solid rgba(124,58,237,.2);
+}
+.msg-agent{
+  align-self:flex-start;
+  background:var(--panel);
+  border:1px solid var(--edge);
+}
+.msg-role{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--txt3);margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.msg-body{font-size:.85rem;color:var(--txt);line-height:1.7}
+.msg-body pre{
+  background:var(--card);border:1px solid var(--edge);border-radius:var(--r);
+  padding:12px;margin:8px 0;overflow-x:auto;
+  font-size:.75rem;color:var(--ice);
+}
+.msg-body code{
+  background:var(--card);border:1px solid var(--edge);
+  padding:1px 5px;border-radius:3px;font-size:.8em;color:var(--violet-lt);
+}
+.msg-body h3{font-family:var(--serif);color:var(--gold-lt);margin:10px 0 4px;font-size:1rem}
+.msg-body ul{padding-left:16px;margin:6px 0}
+.msg-body strong{color:var(--ice);font-weight:600}
+
+.qtype{
+  font-family:var(--mono);font-size:.58rem;padding:1px 7px;border-radius:20px;
+  background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2);
+}
+
+/* sources */
+.sources-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.src-chip{
+  display:flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:4px;
+  background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.18);
+  font-family:var(--mono);font-size:.65rem;color:var(--violet-lt);
+  cursor:pointer;transition:all .15s;
+}
+.src-chip:hover{background:rgba(124,58,237,.22);border-color:var(--violet)}
+.src-dot{width:4px;height:4px;border-radius:50%;background:var(--violet-lt)}
+
+/* actions */
+.msg-actions{margin-top:8px}
+.msg-act-btn{
+  padding:3px 10px;border-radius:4px;
+  border:1px solid var(--edge);background:transparent;
+  color:var(--txt3);font-size:.65rem;cursor:pointer;
+  transition:all .15s;
+}
+.msg-act-btn:hover{border-color:var(--violet);color:var(--violet-lt)}
+
+/* thinking */
+.thinking-body{display:flex;gap:5px;align-items:center;padding:4px 0}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--violet);opacity:.4;
+  animation:dotBounce 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes dotBounce{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+
+/* chat input */
+.chat-input-area{
+  padding:14px 18px;border-top:1px solid var(--edge);
+  flex-shrink:0;background:var(--surface);
+}
+.input-row{
+  display:flex;gap:10px;align-items:flex-end;
+  background:var(--card);border:1px solid var(--edge);
+  border-radius:var(--r-lg);padding:10px 12px;
+  transition:border-color .2s;
+}
+.input-row:focus-within{border-color:rgba(124,58,237,.4);box-shadow:0 0 0 3px rgba(124,58,237,.07)}
+#questionInput{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--txt);font-size:.88rem;resize:none;
+  max-height:120px;min-height:22px;line-height:1.5;
+}
+#questionInput::placeholder{color:var(--txt3)}
+.ask-btn{
+  width:36px;height:36px;border-radius:var(--r);flex-shrink:0;
+  background:linear-gradient(135deg,var(--violet),#9333ea);
+  border:none;color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  box-shadow:0 0 16px rgba(124,58,237,.3);
+}
+.ask-btn:hover{transform:scale(1.07);box-shadow:0 0 24px rgba(124,58,237,.5)}
+.ask-btn:disabled{opacity:.4;transform:none}
+.ask-btn svg{width:16px;height:16px}
+.input-hint{font-family:var(--mono);font-size:.6rem;color:var(--txt4);margin-top:7px}
+
+/* ── Right Panel */
+.right-panel{
+  border-left:1px solid var(--edge);
+  background:var(--surface);
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.right-panel::-webkit-scrollbar{width:2px}
+.right-panel::-webkit-scrollbar-thumb{background:var(--edge)}
+.rp-block{border-bottom:1px solid var(--edge);padding:16px 14px}
+.rp-title{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--txt3);margin-bottom:12px;
+}
+.stats-empty{font-size:.75rem;color:var(--txt4);font-family:var(--mono)}
+.stat-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--edge);
+}
+.stat-item:last-child{border-bottom:none}
+.stat-item-label{font-size:.72rem;color:var(--txt3)}
+.stat-item-val{font-family:var(--mono);font-size:.72rem;color:var(--txt);font-weight:600}
+.top-file{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 8px;border-radius:var(--r);
+  cursor:pointer;transition:background .15s;
+}
+.top-file:hover{background:var(--card)}
+.tf-score{font-family:var(--mono);font-size:.65rem;color:var(--violet-lt)}
+.tf-name{font-size:.75rem;color:var(--txt2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ══════════════════════════════════════════════════════
+   MANUAL DRAWER
+══════════════════════════════════════════════════════ */
+.drawer-overlay{
+  position:fixed;inset:0;z-index:800;
+  background:rgba(5,4,15,0.7);backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.manual-drawer{
+  position:fixed;top:0;right:0;bottom:0;z-index:801;
+  width:480px;max-width:90vw;
+  background:var(--panel);border-left:1px solid var(--edge);
+  transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.manual-drawer.open{transform:translateX(0)}
+.drawer-header{
+  padding:18px 22px;border-bottom:1px solid var(--edge);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.drawer-title{font-family:var(--serif);font-size:1.15rem;color:var(--txt)}
+.drawer-close{
+  width:30px;height:30px;border-radius:var(--r);
+  border:1px solid var(--edge);background:var(--card);
+  color:var(--txt2);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.drawer-close:hover{border-color:var(--violet);color:var(--violet-lt)}
+.drawer-body{flex:1;overflow-y:auto;padding:22px}
+.drawer-body::-webkit-scrollbar{width:2px}
+.drawer-body::-webkit-scrollbar-thumb{background:var(--edge)}
+
+/* steps */
+.steps-title{font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--txt3);margin-bottom:16px}
+.step{display:flex;gap:14px;margin-bottom:16px;position:relative}
+.step::after{content:'';position:absolute;left:19px;top:40px;bottom:-16px;width:1px;background:var(--edge)}
+.step:last-child::after{display:none}
+.step-num{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(245,158,11,.1));
+  border:1px solid rgba(124,58,237,.25);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--violet-lt);z-index:1;
+}
+.step-content{flex:1;padding-top:8px}
+.step-title{font-weight:600;font-size:.88rem;margin-bottom:3px;color:var(--txt)}
+.step-body{font-size:.78rem;color:var(--txt2);line-height:1.6}
+
+/* qtype list */
+.qtypes-title{font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--txt3);margin:24px 0 12px}
+.qtype-row{
+  background:var(--card);border:1px solid var(--edge);border-radius:var(--r);
+  padding:12px;margin-bottom:6px;transition:border-color .2s;
+}
+.qtype-row:hover{border-color:rgba(124,58,237,.3)}
+.qtype-badge{
+  font-family:var(--mono);font-size:.6rem;font-weight:600;
+  padding:2px 8px;border-radius:20px;
+  background:rgba(245,158,11,.08);color:var(--gold);border:1px solid rgba(245,158,11,.15);
+  display:inline-block;margin-bottom:6px;
+}
+.qtype-info h5{font-size:.8rem;font-weight:500;color:var(--txt);margin-bottom:3px}
+.try-btn{
+  margin-top:6px;padding:3px 10px;font-size:.65rem;
+  border:1px solid var(--edge);color:var(--txt3);border-radius:20px;
+  background:transparent;cursor:pointer;transition:all .15s;
+}
+.try-btn:hover{border-color:var(--violet);color:var(--violet-lt)}
+
+.tips-section{margin-top:20px;padding:14px;background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.1);border-radius:var(--r-lg)}
+.tips-title{font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--violet-lt);margin-bottom:10px}
+.tip{font-size:.78rem;color:var(--txt2);line-height:1.6;margin-bottom:6px;padding-left:14px;position:relative}
+.tip::before{content:'◆';position:absolute;left:0;color:var(--violet);font-size:.5rem;top:4px}
+
+/* ══════════════════════════════════════════════════════
+   SOURCE MODAL
+══════════════════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.88);backdrop-filter:blur(8px);
+  display:none;align-items:flex-end;
+}
+.modal-overlay.open{display:flex}
+.src-modal{
+  width:100%;max-height:80vh;
+  background:var(--panel);border-top:1px solid var(--edge);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  display:flex;flex-direction:column;
+  animation:slideUp .3s ease both;overflow:hidden;
+}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.src-header{
+  padding:16px 22px;border-bottom:1px solid var(--edge);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.src-filepath{
+  font-family:var(--mono);font-size:.75rem;color:var(--violet-lt);
+  display:flex;align-items:center;gap:8px;
+}
+.src-filepath::before{content:'⬡';color:var(--txt3)}
+.src-close{
+  width:30px;height:30px;border-radius:var(--r);
+  border:1px solid var(--edge);background:var(--card);
+  color:var(--txt2);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.src-close:hover{border-color:var(--violet);color:var(--violet-lt)}
+.src-body{flex:1;overflow:auto;padding:0}
+.src-code{
+  font-family:var(--mono);font-size:.76rem;line-height:1.7;
+  color:var(--txt2);padding:20px 22px;white-space:pre-wrap;word-break:break-word;
+}
+.src-line-highlight{background:rgba(245,158,11,.08);color:var(--gold-lt)!important;display:block}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:1000;padding:10px 20px;border-radius:var(--r);
+  font-size:.8rem;font-family:var(--mono);
+  background:var(--card);border:1px solid var(--edge);color:var(--txt);
+  opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(74,222,128,.3);color:#4ade80;background:rgba(74,222,128,.06)}
+.toast.error{border-color:rgba(251,113,133,.3);color:var(--rose);background:rgba(251,113,133,.06)}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* Float launch btn */
+#launchBtn{
+  display:flex;
+  position:fixed;bottom:32px;right:32px;z-index:400;
+  padding:13px 22px;border-radius:var(--r-xl);
+  background:linear-gradient(135deg,var(--violet),#9333ea);
+  color:#fff;font-size:.82rem;font-weight:600;
+  border:none;align-items:center;gap:8px;cursor:pointer;
+  box-shadow:0 0 40px var(--violet-glow),0 8px 32px rgba(0,0,0,.4);
+  transition:all .3s;animation:floatBtn 3.5s ease infinite;
+}
+@keyframes floatBtn{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+#launchBtn:hover{box-shadow:0 0 60px rgba(124,58,237,.6),0 8px 40px rgba(0,0,0,.5);animation:none;transform:scale(1.04)}
+</style>
+</head>
+<body>
+
+<!-- 3D Star Warp canvas -->
+<canvas id="starfield"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-gem">
+      <svg viewBox="0 0 14 14" fill="none">
+        <path d="M2 4L7 1L12 4V10L7 13L2 10Z" stroke="white" stroke-width="1.2" fill="none"/>
+        <path d="M7 1V13M2 4L12 10M12 4L2 10" stroke="white" stroke-width="0.7" opacity="0.5"/>
+      </svg>
+    </div>
+    <span>Nex<em>ora</em></span>
+  </div>
+  <div class="topbar-right">
+    <button class="tb-btn" onclick="openManual()">How to Use</button>
+    <button class="tb-btn" id="aboutNavBtn" onclick="showSection('landing')">About</button>
+    <button class="tb-btn primary" id="appNavBtn" style="display:none" onclick="showSection('app')">Open App →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     LANDING
+════════════════════════════ -->
+<div id="landing">
+
+  <!-- Hero Split -->
+  <div class="hero-split">
+    <div class="hero-left">
+      <div class="hero-eyebrow">AST-powered code intelligence</div>
+      <h1 class="hero-h1">
+        <div class="line-pale">Your codebase</div>
+        <div class="line-bright">answers every</div>
+        <div class="line-gold">question you have.</div>
+      </h1>
+      <p class="hero-desc">
+        Nexora doesn't search text — it <strong>parses structure</strong>.
+        Ask anything. Get exact file paths, line numbers, and call chains.
+        In under 2 seconds.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-launch" onclick="goToApp()">
+          Start Using
+          <span class="arr">→</span>
+        </button>
+        <button class="btn-ghost" onclick="openManual()">See How It Works</button>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="terminal-showcase">
+        <div class="term-bar">
+          <div class="term-dot"></div>
+          <div class="term-dot"></div>
+          <div class="term-dot"></div>
+          <div class="term-title">Nexora — bash</div>
+        </div>
+        <div class="term-glow-bar"></div>
+        <div class="term-body" id="termDemo">
+          <div class="t-line"><span class="t-prompt">›</span> <span class="t-cmd" id="termTyped"></span><span class="t-blink" id="termCursor"> </span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat strip -->
+  <div class="stat-strip">
+    <div class="strip-item">
+      <div class="strip-num">76</div>
+      <div class="strip-label">files indexed per minute</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num">11</div>
+      <div class="strip-label">distinct question types</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num">$0</div>
+      <div class="strip-label">cost, forever free</div>
+    </div>
+  </div>
+
+  <!-- Manifesto -->
+  <div class="manifesto-section">
+    <div class="ms-eyebrow">// Why Nexora</div>
+    <div class="manifesto-block">
+      <div class="manifesto-row">
+        <div class="m-num">01</div>
+        <div class="m-text"><em>While others guess,</em> <strong>Nexora knows.</strong></div>
+      </div>
+      <div class="manifesto-row">
+        <div class="m-num">02</div>
+        <div class="m-text"><em>While others search text,</em> <strong>we parse structure.</strong></div>
+      </div>
+      <div class="manifesto-row">
+        <div class="m-num">03</div>
+        <div class="m-text"><em>While others charge $20/month,</em> <strong>we cost nothing.</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features-section">
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-num">001</div>
+        <div class="feat-icon">🧠</div>
+        <div class="feat-title">AST Parsing</div>
+        <div class="feat-body">We parse your code's actual syntax tree — not keyword blobs. Every function, class, and import is understood structurally before you ask a single question.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">002</div>
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Groq Speed</div>
+        <div class="feat-body">Powered by Groq's LPU inference — the fastest AI chip on the planet. Sub-second answers even for complex cross-file trace queries.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">003</div>
+        <div class="feat-icon">📍</div>
+        <div class="feat-title">Exact Sources</div>
+        <div class="feat-body">Every answer comes with exact file paths and line numbers. Click any source chip to see the actual highlighted code — no guessing where anything lives.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Floating launch btn -->
+<button id="launchBtn" onclick="goToApp()">Launch App →</button>
+
+<!-- ════════════════════════════
+     APP SHELL
+════════════════════════════ -->
+<div id="app">
+  <div class="app-layout">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+      <div class="panel-label">
+        Repositories <div class="ph-pulse"></div>
+      </div>
+
+      <div class="url-section">
+        <input id="repoUrlInput" class="url-input" type="text"
+          placeholder="https://github.com/owner/repo"
+          onkeydown="if(event.key==='Enter')processRepo()"/>
+        <button id="processBtn" class="process-btn" onclick="processRepo()">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 3v3l2 1" stroke="currentColor" stroke-linecap="round"/></svg>
+          Process Repository
+        </button>
+      </div>
+
+      <div class="progress-section" id="progressSection">
+        <div class="prog-top">
+          <span class="prog-label" id="progLabel">Starting...</span>
+          <span class="prog-badge" id="progBadge">pending</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-stats">
+          <span>Files <b id="progFiles">0/0</b></span>
+          <span>Chunks <b id="progChunks">0</b></span>
+        </div>
+      </div>
+
+      <div class="repo-list-section" id="repoList">
+        <div class="repo-divider">No repos yet — paste a URL above</div>
+      </div>
+    </div>
+
+    <!-- CHAT PANEL -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div>
+          <div class="chat-repo-name" id="chatRepoName">Select a repository</div>
+          <div class="chat-repo-sub" id="chatRepoSub">Paste a GitHub URL and process it first</div>
+        </div>
+        <div class="chat-actions">
+          <button id="clearBtn" class="icon-btn" title="Clear chat" onclick="clearChat()">⊘</button>
+        </div>
+      </div>
+
+      <div class="suggestions-bar" id="suggestionsBar"></div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">⬡</div>
+          <div class="empty-title">No conversation yet</div>
+          <div class="empty-sub">Select a processed repo from the left, then ask anything about the codebase.</div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-row">
+          <textarea id="questionInput" rows="1"
+            placeholder="Where is the authentication logic defined?"
+            oninput="autoResize(this)"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ask()}"></textarea>
+          <button id="askBtn" class="ask-btn" onclick="ask()">
+            <svg viewBox="0 0 18 18" fill="none"><path d="M3 9h12M10 4l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="input-hint">↵ send · Shift+↵ newline</div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="rp-block">
+        <div class="rp-title">Repo Stats</div>
+        <div id="statsEmpty" class="stats-empty">Select a repo to see stats</div>
+        <div id="statsContent" style="display:none"></div>
+      </div>
+      <div class="rp-block">
+        <div class="rp-title">Quick Ask</div>
+        <div id="quickAsk">
+          <div style="font-size:.72rem;color:var(--txt4);font-family:var(--mono)">Select a repo first</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MANUAL DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeManual()"></div>
+<div class="manual-drawer" id="manualDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">How to Use Nexora</div>
+    <button class="drawer-close" onclick="closeManual()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="steps-title">Getting Started — 3 Steps</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Paste a GitHub URL</div>
+        <div class="step-body">Enter any public GitHub repo URL in the left panel. Click <strong>Process Repository</strong> and watch it index in real time.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Select the repo</div>
+        <div class="step-body">Once indexing completes (green badge), click it in the repo list to make it active.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Ask anything</div>
+        <div class="step-body">Type a question in the chat. You'll get an answer with exact file paths and line numbers. Click any source chip to view highlighted code.</div>
+      </div>
+    </div>
+
+    <div class="qtypes-title">All 11 Question Types</div>
+    <div id="qtypeList"></div>
+
+    <div class="tips-section">
+      <div class="tips-title">Pro Tips</div>
+      <div class="tip">Ask specific questions — "where is login_user" beats "where is login"</div>
+      <div class="tip">Use TRACE for end-to-end flows across multiple files</div>
+      <div class="tip">Use CALLS to find all callers of any function instantly</div>
+      <div class="tip">Click any source chip to see the exact highlighted code</div>
+    </div>
+  </div>
+</div>
+
+<!-- SOURCE MODAL -->
+<div class="modal-overlay" id="srcModal" onclick="if(event.target===this)closeSrcModal()">
+  <div class="src-modal">
+    <div class="src-header">
+      <div class="src-filepath" id="srcFilePath">—</div>
+      <button class="src-close" onclick="closeSrcModal()">✕</button>
+    </div>
+    <div class="src-body">
+      <div class="src-code" id="srcCodeContent"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════
+     3D STAR WARP BACKGROUND
+════════════════════════════ -->
+<script>
+(function(){
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, cx, cy;
+  const NUM_STARS = 500;
+  const SPEED = 2.8;
+  const stars = [];
+
+  function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    cx = W / 2;
+    cy = H / 2;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function mkStar(){
+    return {
+      x: (Math.random() - 0.5) * W * 2,
+      y: (Math.random() - 0.5) * H * 2,
+      z: Math.random() * W,
+      pz: 0
+    };
+  }
+
+  for(let i = 0; i < NUM_STARS; i++){
+    const s = mkStar();
+    s.z = Math.random() * W; // spread initial z
+    stars.push(s);
+  }
+
+  // Subtle violet/gold nebula gradient — drawn once then composited
+  function drawNebula(){
+    // deep violet blob left
+    const g1 = ctx.createRadialGradient(W*0.15, H*0.4, 0, W*0.15, H*0.4, W*0.45);
+    g1.addColorStop(0, 'rgba(124,58,237,0.07)');
+    g1.addColorStop(1, 'transparent');
+    ctx.fillStyle = g1;
+    ctx.fillRect(0,0,W,H);
+
+    // gold blob right
+    const g2 = ctx.createRadialGradient(W*0.82, H*0.6, 0, W*0.82, H*0.6, W*0.35);
+    g2.addColorStop(0, 'rgba(245,158,11,0.05)');
+    g2.addColorStop(1, 'transparent');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function frame(){
+    // clear with slight trail for warp effect
+    ctx.fillStyle = 'rgba(5,4,15,0.25)';
+    ctx.fillRect(0,0,W,H);
+
+    drawNebula();
+
+    for(let i = 0; i < NUM_STARS; i++){
+      const s = stars[i];
+      s.pz = s.z;
+      s.z -= SPEED;
+
+      if(s.z <= 0){
+        s.x = (Math.random() - 0.5) * W * 2;
+        s.y = (Math.random() - 0.5) * H * 2;
+        s.z = W;
+        s.pz = s.z;
+        continue;
+      }
+
+      const sx  = (s.x / s.z)  * W + cx;
+      const sy  = (s.y / s.z)  * H + cy;
+      const px  = (s.x / s.pz) * W + cx;
+      const py  = (s.y / s.pz) * H + cy;
+
+      const size   = Math.max(0.3, (1 - s.z / W) * 2.5);
+      const bright = 1 - s.z / W;
+
+      // Color: mix violet to gold as star comes closer
+      const r = Math.floor(124 + (245-124) * bright);
+      const g = Math.floor(58  + (158-58)  * bright);
+      const b = Math.floor(237 + (11-237)  * bright);
+
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(${r},${g},${b},${bright * 0.9})`;
+      ctx.lineWidth = size;
+      ctx.moveTo(px, py);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+
+<!-- TERMINAL TYPEWRITER DEMO -->
+<script>
+(function(){
+  const lines = [
+    { cmd: 'where is login_user defined?',
+      out: [
+        '→ <span class="t-out-label">FOUND</span>  <span class="t-out-val">auth/users.py</span>',
+        '  <span class="t-out-label">Line</span>   <span class="src t-src">auth/users.py :142</span>',
+        '  <span class="t-out-label">Type</span>   <span class="t-out-val">function</span>',
+        '',
+      ]
+    },
+    { cmd: 'trace the flow of file upload',
+      out: [
+        '→ <span class="t-out-label">TRACE</span>  <span class="t-out-val">4 hops across 3 files</span>',
+        '  <span class="src t-src">api/routes.py :88</span> → <span class="src t-src">core/uploader.py :34</span>',
+        '  <span class="src t-src">utils/storage.py :12</span> → <span class="src t-src">db/files.py :71</span>',
+        '',
+      ]
+    },
+    { cmd: 'how many tsx files are there?',
+      out: [
+        '→ <span class="t-out-label">STATS</span>  <span class="t-out-val">47 .tsx files found</span>',
+        '  <span class="t-comment">// 12 components, 8 pages, 27 utilities</span>',
+        '',
+      ]
+    },
+  ];
+
+  let li = 0;
+  const typed = document.getElementById('termTyped');
+  const cursor = document.getElementById('termCursor');
+  const body = document.getElementById('termDemo');
+
+  function addOutputLine(html){
+    const d = document.createElement('div');
+    d.className = 't-line';
+    d.innerHTML = html;
+    body.insertBefore(d, body.lastElementChild.nextSibling);
+    // keep max 20 lines
+    while(body.children.length > 22) body.removeChild(body.firstChild);
+  }
+
+  function typeCmd(cmd, cb){
+    typed.textContent = '';
+    let i = 0;
+    const iv = setInterval(()=>{
+      typed.textContent += cmd[i++];
+      if(i >= cmd.length){ clearInterval(iv); setTimeout(cb, 500); }
+    }, 38);
+  }
+
+  function showOutput(lines, cb){
+    let i = 0;
+    const iv = setInterval(()=>{
+      if(i >= lines.length){ clearInterval(iv); setTimeout(cb, 1200); return; }
+      addOutputLine(lines[i++]);
+    }, 120);
+  }
+
+  function runNext(){
+    const l = lines[li % lines.length];
+    li++;
+    // Move prompt line to output
+    const promptOut = document.createElement('div');
+    promptOut.className = 't-line';
+    promptOut.innerHTML = `<span class="t-prompt">›</span> <span style="color:var(--gold-lt)">${l.cmd}</span>`;
+    body.insertBefore(promptOut, body.querySelector('#termTyped').parentElement);
+    typed.textContent = '';
+
+    showOutput(l.out, ()=>{
+      addOutputLine('<span class="t-spacer"> </span>');
+      typeCmd(lines[li % lines.length].cmd, ()=>{ /* next loop */ });
+      setTimeout(runNext, l.cmd.length * 38 + 800);
+    });
+  }
+
+  // start after 1.5s
+  setTimeout(()=>{
+    typeCmd(lines[0].cmd, ()=>{ showOutput(lines[0].out, ()=>{
+      addOutputLine('<span class="t-spacer"> </span>');
+      li = 1;
+      typeCmd(lines[1].cmd, ()=>{ showOutput(lines[1].out, ()=>{
+        addOutputLine('<span class="t-spacer"> </span>');
+        li = 2;
+        setTimeout(function loop(){
+          const l = lines[li % lines.length];
+          li++;
+          const promptOut = document.createElement('div');
+          promptOut.className = 't-line';
+          promptOut.innerHTML = `<span class="t-prompt">›</span> <span style="color:var(--gold-lt)">${l.cmd}</span>`;
+          // just keep adding
+          body.appendChild(promptOut);
+          while(body.children.length > 22) body.removeChild(body.firstChild);
+          setTimeout(()=>{
+            l.out.forEach(o=>{ const d=document.createElement('div');d.className='t-line';d.innerHTML=o;body.appendChild(d); while(body.children.length>22)body.removeChild(body.firstChild); });
+            setTimeout(loop, 2500);
+          }, l.cmd.length * 38 + 600);
+        }, 2500);
+      })});
+    });
+    });
+  }, 1500);
+})();
+</script>
+
+<!-- APP LOGIC -->
+<script>
+const API = 'http://127.0.0.1:8000';
+
+let selectedRepo = null;
+let selectedName = null;
+let messages     = [];
+let pollInterval = null;
+let currentPollId = null;
+let repoMap      = {}; // id -> repo object, avoids onclick string escaping bugs
+
+const QTYPES = [
+  {type:'WHERE',    ex:'where is login_user defined',        desc:'Returns exact file path and line number of any function, class, or variable.'},
+  {type:'WHAT',     ex:'what does redact_text do',           desc:'Explains a symbol — purpose, parameters, return value, and source code.'},
+  {type:'HOW',      ex:'how does authentication work',       desc:'Explains the implementation with the full call chain shown.'},
+  {type:'EXPLAIN',  ex:'explain the core logic',             desc:'Full architecture overview: entry points, key components, data flow.'},
+  {type:'TRACE',    ex:'trace the flow of file upload',      desc:'Follows function calls across files end-to-end, 4 levels deep.'},
+  {type:'CALLS',    ex:'what calls redact_text',             desc:'Lists every function that calls the target, with file and line.'},
+  {type:'USES',     ex:'what uses upload-zone',              desc:'Finds every file that imports or references a symbol.'},
+  {type:'STATS',    ex:'how many tsx files are there',       desc:'Gives exact counts and lists every matching item.'},
+  {type:'FILE',     ex:'what functions are in app.py',       desc:'Lists every symbol in a specific file with line numbers.'},
+  {type:'LIST',     ex:'list all functions',                 desc:'Complete inventory of any symbol type across the codebase.'},
+  {type:'CALLED_BY',ex:'what does synthesize_endpoint call', desc:'Shows every function a specific function calls internally.'},
+];
+
+document.getElementById('qtypeList').innerHTML = QTYPES.map(q=>`
+  <div class="qtype-row">
+    <span class="qtype-badge">${q.type}</span>
+    <div class="qtype-info">
+      <h5>${q.desc}</h5>
+      <p style="font-family:var(--mono);color:var(--txt3);font-size:.68rem;margin-top:3px">"${q.ex}"</p>
+      <button class="try-btn" onclick="tryQuestion('${q.ex}')">Try this →</button>
+    </div>
+  </div>
+`).join('');
+
+function showSection(id){
+  document.getElementById('landing').style.display = id==='landing' ? 'flex' : 'none';
+  document.getElementById('landing').style.flexDirection = 'column';
+  document.getElementById('app').style.display     = id==='app'     ? 'block' : 'none';
+  document.getElementById('launchBtn').style.display = id==='landing' ? 'flex' : 'none';
+  document.getElementById('appNavBtn').style.display = id==='app' ? 'flex' : 'none';
+  if(id==='app') loadRepos();
+}
+function goToApp(){ showSection('app'); }
+function openManual(){
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('manualDrawer').classList.add('open');
+}
+function closeManual(){
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('manualDrawer').classList.remove('open');
+}
+function tryQuestion(q){
+  closeManual(); goToApp();
+  document.getElementById('questionInput').value = q;
+  autoResize(document.getElementById('questionInput'));
+}
+
+async function processRepo(){
+  const url = document.getElementById('repoUrlInput').value.trim();
+  const btn = document.getElementById('processBtn');
+  if(!url.startsWith('https://github.com/')){ showToast('Please enter a valid GitHub URL','error'); return; }
+  btn.disabled=true; btn.textContent='⟳ Submitting...';
+  try{
+    const r = await fetch(`${API}/api/process-repo`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({github_url:url})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Failed');
+    showProgress(); startPoll(d.repo_id);
+    btn.textContent='⟳ Processing...';
+  }catch(e){
+    showToast(e.message,'error');
+    btn.disabled=false; btn.textContent='Process Repository';
+  }
+}
+
+function showProgress(){ document.getElementById('progressSection').classList.add('visible') }
+function hideProgress(){ document.getElementById('progressSection').classList.remove('visible') }
+function startPoll(id){ stopPoll(); currentPollId=id; pollInterval=setInterval(()=>pollStatus(id),2000); pollStatus(id); }
+function stopPoll(){ if(pollInterval){clearInterval(pollInterval);pollInterval=null} }
+
+async function pollStatus(id){
+  try{
+    const r = await fetch(`${API}/api/status/${id}`);
+    const d = await r.json();
+    if(!r.ok) return;
+    const {status,total_files,processed_files,chunks_indexed,progress_pct} = d;
+    document.getElementById('progBadge').textContent = status;
+    document.getElementById('progBadge').className   = `prog-badge status-${status}`;
+    document.getElementById('progFill').style.width  = progress_pct+'%';
+    document.getElementById('progFiles').textContent = `${processed_files||0}/${total_files||0}`;
+    document.getElementById('progChunks').textContent = (chunks_indexed||0).toLocaleString();
+    document.getElementById('progLabel').textContent  = statusLabel(status,processed_files,total_files);
+    if(status==='completed'){
+      stopPoll();
+      document.getElementById('processBtn').disabled=false;
+      document.getElementById('processBtn').innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor"/><path d="M6 3v3l2 1" stroke="currentColor" stroke-linecap="round"/></svg> Process Repository';
+      setTimeout(hideProgress,3000); loadRepos();
+      showToast('Indexing complete! Repository ready.','success');
+    }
+    if(status==='failed'){
+      stopPoll();
+      document.getElementById('processBtn').disabled=false;
+      document.getElementById('processBtn').textContent='Process Repository';
+      showToast(d.error_message||'Indexing failed','error');
+    }
+  }catch(e){}
+}
+
+function statusLabel(s,done,total){
+  const m={pending:'Waiting to start...',cloning:'Cloning repository...',scanning:'Scanning files...',analyzing:'Analyzing structure...',indexing:`Indexing — ${done} of ${total} files`,completed:`Done! ${done} files indexed.`,failed:'Failed.'};
+  return m[s]||s;
+}
+
+async function loadRepos(){
+  try{
+    const r = await fetch(`${API}/api/repos`);
+    const d = await r.json();
+    const repos = (d.repos||[]).filter(rr=>['completed','indexing','analyzing','failed'].includes(rr.status));
+    const el = document.getElementById('repoList');
+    if(!repos.length){ el.innerHTML=`<div class="repo-divider">No repos yet — paste a URL above</div>`; return; }
+    repoMap = {};
+    repos.forEach(rr=>{ repoMap[rr.repo_id] = rr; });
+    el.innerHTML = `<div class="repo-divider">Indexed repos</div>` +
+      repos.map(rr=>{
+        const name   = rr.repo_url.replace('https://github.com/','');
+        const active = rr.repo_id===selectedRepo?' active':'';
+        const badge  = rr.status==='completed' ? `<span class="repo-badge rb-done">ready</span>` :
+                       rr.status==='failed'    ? `<span class="repo-badge rb-fail">failed</span>` :
+                                                 `<span class="repo-badge rb-proc">${rr.status}</span>`;
+        const files  = rr.total_files ? `${rr.processed_files}/${rr.total_files} files` : '';
+        return `<div class="repo-item${active}" data-repoid="${rr.repo_id}">
+          <span class="repo-name">${esc(name)}</span>
+          <div class="repo-meta">${badge}<span class="repo-info">${files}</span></div>
+        </div>`;
+      }).join('');
+    el.querySelectorAll('.repo-item[data-repoid]').forEach(item=>{
+      item.addEventListener('click', ()=>{
+        const repo = repoMap[item.dataset.repoid];
+        if(repo) selectRepo(repo.repo_id, repo.repo_url.replace('https://github.com/',''));
+      });
+    });
+  }catch(e){ console.error('loadRepos error:',e); }
+}
+
+function selectRepo(id, name){
+  selectedRepo = id;
+  selectedName = name;
+  messages = [];
+
+  document.getElementById('chatRepoName').textContent = name.split('/').pop();
+  document.getElementById('chatRepoSub').textContent  = name;
+  document.getElementById('clearBtn').style.display   = 'flex';
+
+  // Remove all messages except emptyState (don't wipe innerHTML — that destroys emptyState)
+  const chatEl = document.getElementById('chatMessages');
+  Array.from(chatEl.children).forEach(function(child){
+    if(child.id !== 'emptyState') child.remove();
+  });
+  document.getElementById('emptyState').style.display = 'block';
+
+  // Highlight active repo
+  document.querySelectorAll('.repo-item').forEach(function(el){
+    el.classList.toggle('active', el.dataset.repoid === id);
+  });
+
+  loadStats(id);
+  updateSuggestions(name);
+  console.log('Repo selected:', id, name);
+}
+
+function updateSuggestions(name){
+  const short = name.split('/').pop();
+  const chips = ['explain the core logic',`how does ${short} work`,'list all functions','what are the entry points','trace the main flow','how many files are there'];
+  document.getElementById('suggestionsBar').innerHTML =
+    chips.map(c=>`<span class="sug-chip" onclick="setSuggestion(this)">${esc(c)}</span>`).join('');
+}
+function setSuggestion(el){
+  document.getElementById('questionInput').value = el.textContent;
+  autoResize(document.getElementById('questionInput'));
+  document.getElementById('questionInput').focus();
+}
+
+async function loadStats(repoId){
+  try{
+    const r = await fetch(`${API}/api/status/${repoId}`);
+    const d = await r.json();
+    document.getElementById('statsEmpty').style.display   = 'none';
+    document.getElementById('statsContent').style.display = 'block';
+    const chunks=d.chunks_indexed||0,files=d.total_files||0,proc=d.processed_files||0;
+    document.getElementById('statsContent').innerHTML = `
+      <div class="stat-item"><span class="stat-item-label">Status</span><span class="stat-item-val" style="color:#4ade80">${d.status}</span></div>
+      <div class="stat-item"><span class="stat-item-label">Files indexed</span><span class="stat-item-val">${proc} / ${files}</span></div>
+      <div class="stat-item"><span class="stat-item-label">Code chunks</span><span class="stat-item-val">${chunks.toLocaleString()}</span></div>
+    `;
+    document.getElementById('quickAsk').innerHTML =
+      ['explain the core logic','list all functions','what are the entry points','how does authentication work']
+      .map(q=>`<div class="top-file" onclick="askDirect('${esc(q)}')"><span class="tf-score">→</span><span class="tf-name">${q}</span></div>`).join('');
+  }catch(e){}
+}
+
+function askDirect(q){
+  document.getElementById('questionInput').value=q;
+  ask();
+}
+
+async function ask(){
+  const input=document.getElementById('questionInput');
+  const btn=document.getElementById('askBtn');
+  const q=input.value.trim();
+  if(!q) return;
+  if(!selectedRepo){ showToast('Select a repository first','error'); return; }
+  document.getElementById('emptyState').style.display='none';
+  addMessage('user',q,null,[]);
+  input.value=''; input.style.height='auto'; btn.disabled=true;
+  const thinkId='think-'+Date.now();
+  addThinking(thinkId);
+  try{
+    const r=await fetch(`${API}/api/ask`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo_id:selectedRepo,question:q})});
+    const d=await r.json();
+    removeThinking(thinkId);
+    if(!r.ok) addMessage('agent','Error: '+(d.detail||'Unknown error'),null,[]);
+    else addMessage('agent',d.answer,d.question_type||null,d.sources||[]);
+  }catch(e){ removeThinking(thinkId); addMessage('agent','Network error: '+e.message,null,[]); }
+  btn.disabled=false;
+}
+
+function addMessage(role,text,qtype,sources){
+  const container=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className=`msg msg-${role}`;
+  const roleLabel=role==='user'?'You':'Agent';
+  const qtypeBadge=(role==='agent'&&qtype)?`<span class="qtype">${qtype}</span>`:'';
+  const sourcesHtml=sources&&sources.length?`<div class="sources-row">${[...new Map(sources.map(s=>[s.file,s])).values()].slice(0,6).map(s=>{const short=s.file.split('/').slice(-2).join('/');return`<span class="src-chip" onclick="viewSource('${esc(s.file)}',${s.start_line||0})"><span class="src-dot"></span>${esc(short)} :${s.start_line||0}</span>`;}).join('')}</div>`:'' ;
+  const copyBtn=role==='agent'?`<button class="msg-act-btn" onclick="copyText(this,'${esc(text.replace(/'/g,"\\'"))}')">⎘ Copy</button>`:'';
+  div.innerHTML=`<div class="msg-role">${roleLabel}${qtypeBadge}</div><div class="msg-body">${renderMarkdown(text)}</div>${sourcesHtml}${copyBtn?`<div class="msg-actions">${copyBtn}</div>`:''}`;
+  container.appendChild(div);
+  container.scrollTop=container.scrollHeight;
+}
+
+function addThinking(id){
+  const c=document.getElementById('chatMessages');
+  const d=document.createElement('div');
+  d.className='msg msg-agent';d.id=id;
+  d.innerHTML=`<div class="msg-role">Agent</div><div class="thinking-body"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+function removeThinking(id){const el=document.getElementById(id);if(el)el.remove()}
+
+function renderMarkdown(text){
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```(\w*)\n?([\s\S]*?)```/g,(_,lang,code)=>`<pre><code>${code.trim()}</code></pre>`)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^[*•-] (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>)/s,'<ul>$1</ul>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>').replace(/\n/g,'<br/>');
+}
+
+function clearChat(){
+  messages=[];
+  const c=document.getElementById('chatMessages');
+  Array.from(c.children).forEach(function(child){
+    if(child.id !== 'emptyState') child.remove();
+  });
+  document.getElementById('emptyState').style.display='block';
+}
+
+async function viewSource(file,line){
+  document.getElementById('srcFilePath').textContent=`${file}  ·  line ${line}`;
+  document.getElementById('srcCodeContent').innerHTML=`<span style="color:var(--txt3);font-size:.78rem;font-family:var(--mono)">Loading source...</span>`;
+  document.getElementById('srcModal').classList.add('open');
+  try{
+    const r=await fetch(`${API}/api/ask`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo_id:selectedRepo,question:`show the source code of ${file}`})});
+    const d=await r.json();
+    document.getElementById('srcCodeContent').innerHTML=`<pre style="margin:0">${esc(d.answer||'Source not available.')}</pre>`;
+  }catch(e){ document.getElementById('srcCodeContent').innerHTML=`<span style="color:var(--rose)">Could not load source: ${e.message}</span>`; }
+}
+function closeSrcModal(){ document.getElementById('srcModal').classList.remove('open') }
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function copyText(btn,text){ navigator.clipboard.writeText(text.replace(/\\n/g,'\n')).then(()=>{ btn.textContent='✓ Copied'; setTimeout(()=>{btn.textContent='⎘ Copy'},2000); }); }
+function showToast(msg,type=''){ const t=document.getElementById('toast'); t.textContent=msg; t.className=`toast ${type} show`; setTimeout(()=>{t.className='toast'},3500); }
+
+showSection('landing');
+setInterval(loadRepos,15000);
+</script>
+</body>
+</html>
